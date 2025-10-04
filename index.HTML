@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZAMA Crypto Quiz</title>
+<style>
+    * {margin:0;padding:0;box-sizing:border-box;}
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+        color:#fff;
+        overflow:hidden;
+    }
+    body::before {
+        content:"";
+        position:absolute;
+        top:0;left:0;width:100%;height:100%;
+        background: url('https://i.ibb.co/7t9ZK5h/crypto-bg.jpg') no-repeat center center/cover;
+        opacity:0.2;
+        z-index:-1;
+    }
+    .container {
+        background: rgba(0,0,0,0.75);
+        border-radius:20px;
+        padding:40px;
+        max-width:700px;
+        width:90%;
+        box-shadow:0 0 20px rgba(0,0,0,0.6);
+        text-align:center;
+    }
+    h1{font-size:2.5rem;margin-bottom:10px;color:#00ffcc;}
+    .subtitle{color:#ccc;margin-bottom:30px;}
+    .quiz-section{display:none;}
+    .quiz-section.active{display:block;}
+    .question{background: rgba(255,255,255,0.05); padding:25px; border-radius:15px; margin-bottom:20px; border-left:5px solid #00ffcc;}
+    .question h3{color:#fff;}
+    .options{display:grid;gap:12px;}
+    .option{background: rgba(255,255,255,0.1); padding:15px; border-radius:12px; cursor:pointer; transition:0.3s; color:#fff;}
+    .option:hover{background: rgba(0,255,204,0.2);}
+    .option.correct{background: #4CAF50;color:#fff;}
+    .option.incorrect{background:#f44336;color:#fff;}
+    .feedback{margin:20px 0;padding:15px;border-radius:10px;display:none;font-weight:bold;}
+    .feedback.correct{background:#4CAF50;color:#fff;}
+    .feedback.incorrect{background:#f44336;color:#fff;}
+    .btn{padding:12px 25px;background: linear-gradient(45deg,#00ffcc,#005f5f);border:none;border-radius:50px;color:#000;font-weight:bold;cursor:pointer;margin-top:20px;transition:0.3s;}
+    .btn:hover{transform:translateY(-2px);}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;}
+    .score-circle{width:180px;height:180px;border-radius:50%;margin:20px auto;display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:2rem;font-weight:bold;color:#fff;position:relative;}
+    .score-circle.excellent{background: linear-gradient(45deg, #4CAF50, #8BC34A);}
+    .score-circle.good{background: linear-gradient(45deg, #FF9800, #FFC107);}
+    .score-circle.average{background: linear-gradient(45deg, #2196F3, #03A9F4);}
+    .score-circle.poor{background: linear-gradient(45deg, #f44336, #FF5722);}
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>ZAMA Crypto Quiz</h1>
+    <div class="subtitle">Test your ZAMA blockchain knowledge!</div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="quiz-section active">
+        <p>Welcome! Answer 10 crypto/ZAMA related questions. Immediate feedback & final score!</p>
+        <button class="btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="quiz-section">
+        <div class="question-counter"><span id="current-question">1</span> / <span id="total-questions">10</span></div>
+        <div class="question">
+            <h3 id="question-text"></h3>
+            <div class="options" id="options-container"></div>
+        </div>
+        <div class="feedback" id="feedback"></div>
+        <button class="btn" id="next-btn" onclick="nextQuestion()" disabled>Next Question</button>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="results-screen" class="quiz-section">
+        <h2>Quiz Complete!</h2>
+        <div class="score-circle" id="score-circle">
+            <div id="score-percentage">0%</div>
+        </div>
+        <div id="results-message"></div>
+        <div>
+            Correct: <span id="correct-count">0</span> |
+            Incorrect: <span id="incorrect-count">0</span> |
+            Total: <span id="total-count">0</span>
+        </div>
+        <button class="btn" onclick="restartQuiz()">Take Quiz Again</button>
+    </div>
+</div>
+
+<audio id="correct-audio" src="https://www.soundjay.com/buttons/sounds/button-4.mp3"></audio>
+<audio id="wrong-audio" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+
+<script>
+const quizData = [
+    {question:"What does ZAMA stand for?", options:["Zonal Asset Management Authority","Zero Asset Management Algorithm","ZAMA Blockchain Protocol","Zonal Application Market Access"], correct:2},
+    {question:"Which consensus mechanism does ZAMA use?", options:["Proof of Work","Proof of Stake","Delegated Proof of Stake","ZAMA Proof"], correct:3},
+    {question:"ZAMA token symbol is?", options:["ZMA","ZAM","ZAMA","ZM"], correct:0},
+    {question:"Maximum supply of ZAMA tokens?", options:["1 Million","10 Million","100 Million","1 Billion"], correct:2},
+    {question:"Which year ZAMA blockchain launched?", options:["2018","2020","2022","2023"], correct:2},
+    {question:"Which feature is unique to ZAMA?", options:["Smart Contracts","NFT Support","Zero Gas Fees","Decentralized Exchange"], correct:2},
+    {question:"ZAMA governance is controlled by?", options:["Developers","Community","Central Bank","Founders"], correct:1},
+    {question:"ZAMA blockchain uses which language?", options:["Python","Solidity","Rust","Go"], correct:2},
+    {question:"Where is ZAMA Foundation headquartered?", options:["USA","Switzerland","Singapore","UK"], correct:1},
+    {question:"Which wallet supports ZAMA tokens?", options:["Metamask","Trust Wallet","ZAMA Wallet","Coinbase"], correct:2}
+];
+
+let currentQuestion=0, score=0, selectedOption=-1;
+
+function startQuiz(){
+    document.getElementById('start-screen').classList.remove('active');
+    document.getElementById('quiz-screen').classList.add('active');
+    document.getElementById('total-questions').textContent=quizData.length;
+    loadQuestion();
+}
+
+function loadQuestion(){
+    if(currentQuestion>=quizData.length){showResults();return;}
+    const q=quizData[currentQuestion];
+    document.getElementById('current-question').textContent=currentQuestion+1;
+    document.getElementById('question-text').textContent=q.question;
+    const container=document.getElementById('options-container');
+    container.innerHTML='';
+    q.options.forEach((option,i)=>{
+        const el=document.createElement('div');
+        el.className='option';
+        el.textContent=option;
+        el.onclick=()=>selectOption(i);
+        container.appendChild(el);
+    });
+    selectedOption=-1;
+    document.getElementById('next-btn').disabled=true;
+    const feedback=document.getElementById('feedback');
+    feedback.style.display='none';
+    feedback.className='feedback';
+}
+
+function selectOption(i){
+    if(selectedOption!==-1)return;
+    selectedOption=i;
+    const options=document.querySelectorAll('.option');
+    const q=quizData[currentQuestion];
+    options.forEach((el,idx)=>{
+        el.style.pointerEvents='none';
+        if(idx===q.correct) el.classList.add('correct');
+        else if(idx===i && idx!==q.correct) el.classList.add('incorrect');
+    });
+    const feedback=document.getElementById('feedback');
+    if(i===q.correct){
+        score++;
+        feedback.textContent='✅ Correct!';
+        feedback.className='feedback correct';
+        document.getElementById('correct-audio').play();
+    } else {
+        feedback.textContent='❌ Wrong! Correct: '+q.options[q.correct];
+        feedback.className='feedback incorrect';
+        document.getElementById('wrong-audio').play();
+    }
+    feedback.style.display='block';
+    document.getElementById('next-btn').disabled=false;
+}
+
+function nextQuestion(){currentQuestion++;setTimeout(loadQuestion,200);}
+
+function showResults(){
+    document.getElementById('quiz-screen').classList.remove('active');
+    document.getElementById('results-screen').classList.add('active');
+    const perc=Math.round((score/quizData.length)*100);
+    document.getElementById('score-percentage').textContent=perc+'%';
+    document.getElementById('correct-count').textContent=score;
+    document.getElementById('incorrect-count').textContent=quizData.length-score;
+    document.getElementById('total-count').textContent=quizData.length;
+    const scoreCircle=document.getElementById('score-circle');
+    let msg='';
+    if(perc>=80){scoreCircle.className='score-circle excellent'; msg='🏆 Excellent! Crypto master!';}
+    else if(perc>=60){scoreCircle.className='score-circle good'; msg='👏 Good job! Keep learning!';}
+    else if(perc>=40){scoreCircle.className='score-circle average'; msg='👍 Not bad! Try again!';}
+    else {scoreCircle.className='score-circle poor'; msg='💪 Don’t give up! Try again!';}
+    document.getElementById('results-message').textContent=msg;
+}
+
+function restartQuiz(){
+    currentQuestion=0; score=0; selectedOption=-1;
+    document.getElementById('results-screen').classList.remove('active');
+    document.getElementById('start-screen').classList.add('active');
+}
+</script>
+</body>
+</html>
